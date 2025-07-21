@@ -1,0 +1,72 @@
+services:
+  mysql:
+    image: mysql:lts
+    container_name: cooperados_mysql
+    restart: unless-stopped	
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+      - APP_ENV=development
+    container_name: cooperados_backend
+    restart: unless-stopped	
+    ports:
+      - 9501:9501
+    volumes:
+      - ./backend:/opt/www
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      APP_ENV: ${APP_ENV}
+    depends_on:
+      - mysql
+    command: php bin/hyperf.php start
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cooperados_frontend
+    restart: unless-stopped	
+    ports:
+      - 5173:5173
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    depends_on:
+      - backend
+    command: npm run dev -- --host
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cooperados_phpmyadmin
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: ${DB_HOST}
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
