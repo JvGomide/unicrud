@@ -14,6 +14,17 @@ Utilize docker para rodar o programa
 docker compose up
 ```
 
+Ou pode rodar apenas, de dentro da pasta do Frontend
+
+```bash
+npm i
+```
+E depois
+
+```bash
+npm run dev
+```
+
 ## Uso
 
 O programa rodará o frontend na porta 5173. Para acessar bastar ir ao endereço: http://localhost:5173/
