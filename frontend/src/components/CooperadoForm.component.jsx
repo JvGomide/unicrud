@@ -1,7 +1,8 @@
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, FormProvider } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import Cleave from "cleave.js/react";
+import { useState, useEffect } from "react";
 
 const schema = yup.object().shape({
   nome: yup.string().required("Nome é obrigatório"),
@@ -12,115 +13,135 @@ const schema = yup.object().shape({
 });
 
 export default function CooperadoForm({ onSubmit, defaultValues }) {
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-  } = useForm({
+  const methods = useForm({
     resolver: yupResolver(schema),
     defaultValues,
   });
 
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = methods;
+
+  function formatCpfCnpj(value) {
+    const digits = value.replace(/\D/g, '');
+
+    if (digits.length <= 11) {
+      // CPF: 999.999.999-99
+      return digits
+        .replace(/^(\d{3})(\d)/, '$1.$2')
+        .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1-$2')
+        .slice(0, 14);
+    } else {
+      // CNPJ: 99.999.999/9999-99
+      return digits
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .slice(0, 18);
+    }
+  }
+
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-      {/* Nome */}
-      <div>
-        <label className="block mb-1">Nome</label>
-        <input
-          {...register("nome")}
-          className={`border p-2 w-full rounded ${
-            errors.nome ? "border-red-500" : "border-gray-300"
-          } focus:outline-none focus:border-[#006341]`}
-        />
-        <p className="text-red-500 text-sm">{errors.nome?.message}</p>
-      </div>
+        {/* Nome */}
+        <div>
+          <label className="block mb-1">Nome</label>
+          <input
+            {...register("nome")}
+            className={`border p-2 w-full rounded ${
+              errors.nome ? "border-red-500" : "border-gray-300"
+            } focus:outline-none focus:border-[#006341]`}
+          />
+          <p className="text-red-500 text-sm">{errors.nome?.message}</p>
+        </div>
 
-      {/* Telefone */}
-      <div>
-        <label className="block mb-1">Telefone</label>
-        <Controller
-          name="telefone"
-          control={control}
-          render={({ field: { onChange, value } }) => (
-            <Cleave
-              value={value}
-              options={{ phone: true, phoneRegionCode: "BR" }}
-              onChange={(e) => onChange(e.target.value)}
-              className={`border p-2 w-full rounded ${
-                errors.telefone ? "border-red-500" : "border-gray-300"
-              } focus:outline-none focus:border-[#006341]`}
-            />
-          )}
-        />
-        <p className="text-red-500 text-sm">{errors.telefone?.message}</p>
-      </div>
-
-      {/* CPF/CNPJ dinâmico */}
-      <div>
-        <label className="block mb-1">CPF ou CNPJ</label>
-        <Controller
-          name="cpf_cnpj"
-          control={control}
-          render={({ field: { onChange, value } }) => {
-            const digits = value?.replace(/\D/g, "") || "";
-            const isCNPJ = digits.length > 11;
-            const blocks = isCNPJ ? [2, 3, 3, 4, 2] : [3, 3, 3, 2];
-            const delimiters = isCNPJ ? [".", ".", "/", "-"] : [".", ".", "-"];
-
-            return (
+        {/* Telefone */}
+        <div>
+          <label className="block mb-1">Telefone</label>
+          <Controller
+            name="telefone"
+            control={control}
+            render={({ field: { onChange, value } }) => (
               <Cleave
                 value={value}
-                options={{
-                  delimiters,
-                  blocks,
-                  numericOnly: true,
-                }}
+                options={{ phone: true, phoneRegionCode: "BR" }}
                 onChange={(e) => onChange(e.target.value)}
+                className={`border p-2 w-full rounded ${
+                  errors.telefone ? "border-red-500" : "border-gray-300"
+                } focus:outline-none focus:border-[#006341]`}
+              />
+            )}
+          />
+          <p className="text-red-500 text-sm">{errors.telefone?.message}</p>
+        </div>
+
+        {/* CPF ou CNPJ */}
+        <div>
+          <label className="block mb-1">CPF ou CNPJ</label>
+          <Controller
+            name="cpf_cnpj"
+            control={control}
+            render={({ field: { value, onChange, ref } }) => (
+              <input
+                value={value || ""}
+                onChange={(e) => {
+                  const formatted = formatCpfCnpj(e.target.value);
+                  onChange(formatted);
+                }}
+                ref={ref}
                 className={`border p-2 w-full rounded ${
                   errors.cpf_cnpj ? "border-red-500" : "border-gray-300"
                 } focus:outline-none focus:border-[#006341]`}
+                placeholder="Digite o CPF ou CNPJ"
               />
-            );
-          }}
-        />
-        <p className="text-red-500 text-sm">{errors.cpf_cnpj?.message}</p>
-      </div>
+            )}
+          />
+          <p className="text-red-500 text-sm">{errors.cpf_cnpj?.message}</p>
+        </div>
 
-      {/* Data de Nascimento */}
-      <div>
-        <label className="block mb-1">Data de Nascimento</label>
-        <input
-          type="date"
-          {...register("data_nascimento")}
-          className={`border p-2 w-full rounded ${
-            errors.data_nascimento ? "border-red-500" : "border-gray-300"
-          } focus:outline-none focus:border-[#006341]`}
-        />
-        <p className="text-red-500 text-sm">
-          {errors.data_nascimento?.message}
-        </p>
-      </div>
+        {/* Data de nascimento */}
+        <div>
+          <label className="block mb-1">Data de Nascimento</label>
+          <input
+            type="date"
+            {...register("data_nascimento")}
+            className={`border p-2 w-full rounded ${
+              errors.data_nascimento ? "border-red-500" : "border-gray-300"
+            } focus:outline-none focus:border-[#006341]`}
+          />
+          <p className="text-red-500 text-sm">{errors.data_nascimento?.message}</p>
+        </div>
 
-      {/* Email */}
-      <div>
-        <label className="block mb-1">Email</label>
-        <input
-          {...register("email")}
-          className={`border p-2 w-full rounded ${
-            errors.email ? "border-red-500" : "border-gray-300"
-          } focus:outline-none focus:border-[#006341]`}
-        />
-        <p className="text-red-500 text-sm">{errors.email?.message}</p>
-      </div>
+        {/* Email */}
+        <div>
+          <label className="block mb-1">Email</label>
+          <input
+            {...register("email")}
+            className={`border p-2 w-full rounded ${
+              errors.email ? "border-red-500" : "border-gray-300"
+            } focus:outline-none focus:border-[#006341]`}
+          />
+          <p className="text-red-500 text-sm">{errors.email?.message}</p>
+        </div>
 
-      <button
-        type="submit"
-        className="bg-[#006341] hover:bg-[#004B2E] text-white px-6 py-2 rounded shadow-md transition"
-      >
-        Salvar
-      </button>
-    </form>
+        {/* Botão */}
+        <button
+          type="submit"
+          className="bg-[#006341] hover:bg-[#004B2E] text-white px-6 py-2 rounded shadow-md transition"
+        >
+          Salvar
+        </button>
+      </form>
+    </FormProvider>
   );
 }

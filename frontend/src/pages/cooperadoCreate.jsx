@@ -1,8 +1,7 @@
 import Layout from "../components/Layout.component";
 import CooperadoForm from "../components/CooperadoForm.component";
 import { useNavigate } from "react-router-dom";
-import 'cleave.js/dist/addons/cleave-phone.i18n';
-// import { createCooperado } from "../api/cooperados";
+import "cleave.js/dist/addons/cleave-phone.i18n";
 
 export default function CooperadoCreate() {
   const navigate = useNavigate();
@@ -11,8 +10,6 @@ export default function CooperadoCreate() {
     try {
       console.log("Cooperado cadastrado (mock):", data);
       alert("Cooperado cadastrado com sucesso!");
-      // Se tiver backend:
-      // await createCooperado(data);
       navigate("/list");
     } catch (error) {
       console.error("Erro ao cadastrar:", error);
